@@ -2,7 +2,7 @@ const ytdl = require('ytdl-core');
 const mergeOptions = require('merge-options');
 const ytsr = require('ytsr');
 const { VoiceChannel, version, User } = require("discord.js");
-if (version.split('.')[0] !== '12') throw new Error("Only the master branch of discord.js library is supported for now. Install it using 'npm install discordjs/discord.js'.");
+if (Number(version.split('.')[0]) < 12) throw new Error("Only the master branch of discord.js library is supported for now. Install it using 'npm install discordjs/discord.js'.");
 const Queue = require('./Queue');
 const Util = require('./Util');
 const Song = require('./Song');
@@ -212,7 +212,9 @@ class Player {
         // Gets guild queue
         let queue = this.queues.find((g) => g.guildID === guildID);
         if (!queue) return new MusicPlayerError('QueueIsNull');
-        // Pauses the dispatcher
+        // Resumes the dispatcher
+        queue.dispatcher.resume();
+        queue.dispatcher.pause();
         queue.dispatcher.resume();
         queue.playing = true;
         // Resolves the guild queue
