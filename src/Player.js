@@ -12,7 +12,7 @@ class Player extends EventEmitter {
 
     /**
      * @param {Discord.Client} client Your Discord Client instance.
-     * @param {Partial<Util.PlayerOptions>} options The PlayerOptions object.
+     * @param {Partial<Util.PlayerOptions>|Util.PlayerOptions} options The PlayerOptions object.
      */
     constructor(client, options = Util.PlayerOptions) {
         super();
@@ -33,7 +33,7 @@ class Player extends EventEmitter {
         this.queues = new Discord.Collection();
         /**
          * Player options.
-         * @type {Partial<Util.PlayerOptions>}
+         * @type {Util.PlayerOptions}
          */
         this.options = options;
         /**
@@ -112,8 +112,8 @@ class Player extends EventEmitter {
 
             return song;
         }
-        catch (err = {}) {
-            this.emit('error', err.message || err, message);
+        catch (err) {
+            this.emit('error', err instanceof Error ? err.message : err, message);
         }
     }
 
@@ -168,8 +168,8 @@ class Player extends EventEmitter {
 
             return song;
         }
-        catch (err = {}) {
-            this.emit('error', err.message || err, message);
+        catch (err) {
+            this.emit('error', err instanceof Error ? err.message : err, message);
         }
     }
 
@@ -261,7 +261,8 @@ class Player extends EventEmitter {
             // Add all songs to the GuildQueue
             queue.songs = queue.songs.concat(playlist.videos);
             // Updates the queue
-            this.queues.set(_voiceState.guild.id, queue);
+            if(!isFirstPlay)
+                this.queues.set(_voiceState.guild.id, queue);
             /**
              * playlistAdd event.
              * @event Player#playlistAdd
@@ -274,8 +275,8 @@ class Player extends EventEmitter {
 
             return playlist;
         }
-        catch (err = {}) {
-            this.emit('error', err.message || err, message);
+        catch (err) {
+            this.emit('error', err instanceof Error ? err.message : err, message);
         }
     }
 
@@ -725,7 +726,7 @@ class Player extends EventEmitter {
     /**
      * Creates a progress bar per current playing song.
      * @param {Discord.Message} message The Discord Message object.
-     * @param {Util.ProgressOptions} options Progressbar options.
+     * @param {Partial<Util.ProgressOptions>} options Progressbar options.
      * @returns {String}
      */
     createProgressBar(message, options) {
@@ -751,6 +752,29 @@ class Player extends EventEmitter {
     }
 
     /**
+     * Updates Queue Options
+     * @param {Discord.Message} message The Discord Message object.
+     * @param {Partial<Util.PlayerOptions>} options Player options.
+     */
+    updateQueueOptions(message, options= {}) {
+        // Check for Message
+        if(!Util.isMessage(message))
+        {
+            this.emit('error', 'MessageTypeInvalid', message);
+            return null;
+        }
+        // Gets guild queue
+        let queue = this.queues.get(message.guild.id);
+        if (!queue)
+        {
+            this.emit('error', 'QueueIsNull', message);
+            return null;
+        }
+
+        queue.options = Object.assign(Util.PlayerOptions, options);
+    }
+
+    /**
      * Start playing songs in a guild.
      * @ignore
      * @param {Discord.Snowflake} guildID
@@ -759,6 +783,9 @@ class Player extends EventEmitter {
      */
     async _playSong(guildID, firstPlay, seek= null) {
         // Gets guild queue
+        /**
+         * @type {?Queue}
+         */
         let queue = this.queues.get(guildID);
         // If there isn't any music in the queue
         if (queue.stopped || ((queue.songs.length < 2 && !firstPlay) && (!queue.repeatMode && !queue.repeatQueue))) {
@@ -766,8 +793,7 @@ class Player extends EventEmitter {
             if (queue.stopped) {
                 // Removes the guild from the guilds list
                 this.queues.delete(guildID);
-
-                if (this.options.leaveOnStop)
+                if (queue.options.leaveOnStop)
                     queue.connection.channel.leave();
                 /**
                  * queueEnd event.
@@ -777,7 +803,7 @@ class Player extends EventEmitter {
             }
             // Emits end event
             this.emit('queueEnd', queue.initMessage, queue);
-            if (this.options.leaveOnEnd) {
+            if (queue.options.leaveOnEnd) {
 
                 // Removes the guild from the guilds list
                 this.queues.delete(guildID);
@@ -788,7 +814,7 @@ class Player extends EventEmitter {
                     if (!queue || queue.songs.length < 1) {
                         return connectionChannel.leave();
                     }
-                }, this.options.timeout);
+                }, queue.options.timeout);
                 return;
             }
             return;
@@ -799,14 +825,15 @@ class Player extends EventEmitter {
                 + 'Please do not use repeatMode and repeatQueue together');
             else queue.songs.push(queue.songs[0]);
         }
-
         if (!firstPlay) {
-            if(!queue.repeatMode) queue.songs.shift();
+            let _oldSong;
+            if(!queue.repeatMode)
+                _oldSong = queue.songs.shift();
             /**
              * songChanged event.
              * @event Player#songChanged
              */
-            this.emit('songChanged', queue.initMessage, queue.songs[0]);
+            this.emit('songChanged', queue.initMessage, queue.songs[0], _oldSong);
         } else {
             /**
              * songFirst event.
@@ -866,14 +893,12 @@ class Player extends EventEmitter {
      * @param {Discord.VoiceState} newState
      */
     _voiceUpdate(oldState, newState) {
-        if (!this.options.leaveOnEmpty) return;
         // If message leaves the current voice channel
         if (oldState.channelID === newState.channelID) return;
         // Search for a queue for this channel
         let queue = this.queues.get(oldState.guild.id);
         if (queue) {
-            //
-            if (!newState.channelID && this.client.user.id === newState.member.id) {
+            if (!newState.channelID && this.client.user.id === oldState.member.id) {
                 // Disconnect from the voice channel and destroy the stream
                 if(queue.stream) queue.stream.destroy();
                 if(queue.connection.channel) queue.connection.channel.leave();
@@ -887,9 +912,8 @@ class Player extends EventEmitter {
                 return this.emit('clientDisconnect', queue.initMessage, queue);
             }
             // If the channel is not empty
-            if (queue.connection.channel.members.size > 1) return;
+            if (!queue.options.leaveOnEmpty && queue.connection.channel.members.size > 1) return;
             // Start timeout
-
             setTimeout(() => {
                 // If the channel is not empty
                 if (queue.connection.channel.members.size > 1) return;

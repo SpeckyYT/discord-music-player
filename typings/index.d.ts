@@ -8,9 +8,9 @@ interface PlayerEvents {
     songAdd: [message: Message, queue: Queue, song: Song];
     playlistAdd: [message: Message, queue: Queue, playlist: Playlist];
     queueEnd: [message: Message, queue: Queue];
-    songChanged: [message: Message, song: Song];
+    songChanged: [message: Message, newSong: Song, oldSong: Song];
     songFirst: [message: Message, song: Song];
-    error: [message: Message, message: String];
+    error: [error: String, message: Message];
     clientDisconnect: [message: Message, queue: Queue];
 }
 type PlayOptions = {
@@ -71,6 +71,7 @@ class Player {
     remove(message:Message, song:Number):Song
     shuffle(message:Message):Array<Song>
     createProgressBar(message:Message, options?:ProgressOptions):String
+    updateQueueOptions(message: Message, options?:PlayerOptions):void
     _playSong(guildID:String, firstPlay:Boolean, seek:null|Number):void
 }
 
@@ -87,6 +88,7 @@ class Queue {
     repeatMode: Boolean;
     repeatQueue: Boolean;
     initMessage: Message;
+    options: PlayerOptions;
 }
 
 class Song {
@@ -98,7 +100,7 @@ class Song {
     thumbnail: String;
     queue: Queue;
     isLive: Boolean;
-    requestedBy: String;
+    requestedBy: Object|String;
     seekTime: Number;
 }
 
