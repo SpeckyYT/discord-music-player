@@ -9,12 +9,13 @@ Discord Player is a powerful [Node.js](https://nodejs.org) module that allows yo
 
 ### *We support NodeJS 12-15.*
 
-## **DMP v7.1.0 Update:**
-- **Added [updateQueueOptions](#update-queue-options) method,**
-- **`Queue` contains a `options` object now`,**
-- **Fixed `Player#songChanged` event (it contains `oldSong` now ),**
-- **Fixed `Player#clientDisconnect` event that  was not firing up,**,
-- **Fixed `playlist` method not working while Queue existed.**
+## **DMP v7.1.4 Update:**
+- **Fixed `PlayerOptions#leaveOnEmpty` option that fired up even if was set to `false`,**
+- **Added support for StageChannels (only for branches that support them),**
+- **Fixed `playlist` method while `Queue` is empty,**
+- **Added `PlayerOptions#deafenOnJoin` option that auto-deafens the bot while joining the voice channel - [Read More](#player-options),**
+- **Added `PlayerEvent#clientUndeafen` event - [Read More](#events),**
+- **Removed `Message` object checkout while running a method.**
 
 # Page Sections
 - **[Installation](#installation)**
@@ -69,6 +70,8 @@ client.login(settings.token);
 **options.leaveOnStop [true/false]**: If set to **true**, the bot will leave the Voice Channel when the `stop()` function is used.
 
 **options.leaveOnEmpty [true/false]**: If set to **true**, bot will automatically leave the Voice Channel when is empty.
+
+**options.deafenOnJoin [true/false]**: If set to **true**, bot will automatically deafen while joining the Voice Channel.
 
 **options.timeout [number]**: If set to **milliseconds**, bot will leave onEnd & onEmpty after that amount of time.
 
@@ -176,6 +179,9 @@ client.player
         message.channel.send(`**${song.name}** is now playing!`))
     // Emitted when someone disconnected the bot from the channel.
     .on('clientDisconnect', (message, queue) =>
+        message.channel.send(`I got disconnected from the channel, music was removed.`))
+    // Emitted when deafenOnJoin is true and the bot was undeafened
+    .on('clientUndeafen', (message, queue) =>
         message.channel.send(`I got disconnected from the channel, music was removed.`))
     // Emitted when there was an error with NonAsync functions.
     .on('error', (error, message) => {

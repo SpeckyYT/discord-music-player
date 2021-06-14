@@ -12,33 +12,35 @@ interface PlayerEvents {
     songFirst: [message: Message, song: Song];
     error: [error: String, message: Message];
     clientDisconnect: [message: Message, queue: Queue];
+    clientUndeafen: [message: Message, queue: Queue]
 }
 type PlayOptions = {
     search: String,
-    uploadDate: 'hour'|'today'|'week'|'month'|'year',
-    duration: 'short'|'long',
-    sortBy: 'relevance'|'date'|'view count'|'rating',
-    requestedBy: String,
-    index: Number
+    uploadDate?: 'hour'|'today'|'week'|'month'|'year',
+    duration?: 'short'|'long',
+    sortBy?: 'relevance'|'date'|'view count'|'rating',
+    requestedBy?: String,
+    index?: Number
 }
 type PlaylistOptions = {
     search: String,
-    maxSongs: Number,
-    requestedBy: String
-    shuffle: Boolean,
+    maxSongs?: Number,
+    requestedBy?: String
+    shuffle?: Boolean,
 }
 type ProgressOptions = {
-    size: Number,
-    arrow: String,
-    block: String,
+    size?: Number,
+    arrow?: String,
+    block?: String,
 }
 type PlayerOptions = {
-    leaveOnEnd: Boolean
-    leaveOnStop: Boolean
-    leaveOnEmpty: Boolean
-    timeout: Number
-    volume: Number
-    quality: 'high'|'low'
+    leaveOnEnd?: Boolean
+    leaveOnStop?: Boolean
+    leaveOnEmpty?: Boolean
+    deafenOnJoin?: Boolean
+    timeout?: Number
+    volume?: Number
+    quality?: 'high'|'low'
 }
 
 class Player {
@@ -120,5 +122,5 @@ class MusicPlayerError {
 }
 
 export const Player:Player
-export const Util:Util
+export const Utils:Util
 export const version:String
